@@ -10,15 +10,11 @@ from . forms import LoginForm, ApiForm
 from . serviceuser import (
     connect
 )
-from . import serviceentity as sentity
-from . import servicebranch as sbranch
-from . import serviceservice as sservice
 from . import servicefunction as sfunction
 from . import servicecategorie as scategorie
 from . import servicearticle as sarticle
 from . import servicestockageaera as sstockageaera
 from . import servicecareer as scareer
-from . import servicevillage as svillage
 from . import servicestockageaeralv as sstockageaeralv
 from . import servicecareerlv as scareerlv
 from . import servicecareerarticle as scareerarticle
@@ -48,16 +44,6 @@ def f_login(request):
         if form.is_valid():
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            
- 
-            #user = authenticate(
-            #    request,
-            #    username=email,
-            #    password=password
-            #)
-            #login(request, user)
-            #return redirect(reverse('frontend_dashboard'))
-            
             res = connect(email=email, password=password)
             if res.get('detail', 0) != 0:
                 messages.error(request, res['detail'])
@@ -114,48 +100,22 @@ def f_login(request):
 
 @login_required(login_url='/')
 def dashbord(request):
-    #logout(request)
-    #request.user.profil.access = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzAwMTU1Nzg0LCJpYXQiOjE3MDAwNjkzODQsImp0aSI6IjI1ZjJjNGRmNDFkNjRjN2U4MGFlMDgyYjY0YjcyMjNiIiwidXNlcl9pZCI6IjRmNjk2ZTkyLTVkNGUtNGQ0MS04MTIzLTJhMjFjNWYzNDg1MyJ9.7ebkID1iFbG73FYMiGCoYKExVSCyqLbz67GeNb4zl20"
-    #request.user.profil.save()
     return render(request, 'frontend/index.html')
 
 
 @login_required(login_url='/')
 def user(request):
-    data = {}
+    conn = http.client.HTTPSConnection(ENDPOINT_USER)
+    payload = ''
+    headers = {
+        "Authorization": 'Bearer ' + request.user.profil.access
+    }
+    conn.request("GET", "/users/account/", payload, headers)
+    response = conn.getresponse()
+    data = json.loads(response.read())
     data['access'] = request.user.profil.access
-    data['refresh'] = request.user.profil.refresh
-    return JsonResponse(data, status=200)
-
-
-@login_required(login_url='/')
-def entity(request):
-    data = {"status": 400}
-    if request.method == "GET":
-        data = sentity.read(request=request)
-    elif request.method == "POST":
-        data = sentity.create(request=request)
-    return JsonResponse(data, status=data['status'])
-
-
-@login_required(login_url='/')
-def branch(request):
-    data = {"status": 400}
-    if request.method == "GET":
-        data = sbranch.read(request=request)
-    elif request.method == "POST":
-        data = sbranch.create(request=request)
-    return JsonResponse(data, status=data['status'])
-
-
-@login_required(login_url='/')
-def service(request):
-    data = {"status": 400}
-    if request.method == "GET":
-        data = sservice.read(request=request)
-    elif request.method == "POST":
-        data = sservice.create(request=request)
-    return JsonResponse(data, status=data['status'])
+    conn.close()
+    return JsonResponse(data, status=response.status)
 
 
 @login_required(login_url='/')
@@ -239,28 +199,18 @@ def careerarticle(request):
 
 
 @login_required(login_url='/')
-def village(request):
-    data = {"status": 400}
-    if request.method == "GET":
-        data = svillage.read(request=request)
-    elif request.method == "POST":
-        data = svillage.create(request=request)
-    return JsonResponse(data, status=data['status'])
-
-
-@login_required(login_url='/')
 def api(request):
     data = {"status": 400}
 
     if request.method == "GET":
         form = ApiForm(request.GET)
-        payload = ''
+        payload = '?page=2'
         verb = 'GET'
-    elif request.method == "POST":
+    else:
         charge = json.loads(request.body)
         form = ApiForm(charge)
         payload = json.dumps(charge)
-        verb = 'POST'
+        verb = request.method
 
     if form.is_valid():
         end = form.cleaned_data['end']
@@ -268,6 +218,7 @@ def api(request):
         terminaison = form.cleaned_data['terminaison']
         id = form.cleaned_data.get('id', 'abc')
         action = form.cleaned_data.get('action', '')
+        page = form.cleaned_data.get('page', 1)
 
         if end == 'career':
             ENDPOINT = ENDPOINT_CAREER
@@ -290,6 +241,8 @@ def api(request):
                 headers
             )
         else:
+            if page != 1:
+                terminaison += '/?page=' + str(page)
             conn.request(verb, "/" + terminaison, payload, headers)
         response = conn.getresponse()
         data = json.loads(response.read())
@@ -300,6 +253,7 @@ def api(request):
            "detail": form['detail'].errors,
            "terminaison": form['terminaison'].errors,
            "id": form['id'].errors,
-           "action": form['action'].errors
+           "action": form['action'].errors,
+           "verb": verb
         }
     return JsonResponse(data, status=data['status'])
