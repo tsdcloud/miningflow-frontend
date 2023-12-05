@@ -8,9 +8,6 @@ urlpatterns = [
     path('home', views.dashbord, name='frontend_dashboard'),
 
     path('user', views.user, name='frontend_user'),
-    path('entity', views.entity, name='frontend_entity'),
-    path('branch', views.branch, name='frontend_branch'),
-    path('service', views.service, name='frontend_service'),
     path('function', views.function, name='frontend_function'),
     path('categorie', views.categorie, name='frontend_categorie'),
     path('article', views.article, name='frontend_article'),
@@ -20,8 +17,5 @@ urlpatterns = [
          views.stockageaeralv, name='frontend_stockagearealv'),
     path('careerlv', views.careerlv, name='frontend_careerlv'),
     path('careerarticle', views.careerarticle, name='frontend_careerarticle'),
-
-    path('village', views.village, name='frontend_village'),
-
     re_path(r'^api', views.api, name='api'),
 ]
